@@ -1,11 +1,21 @@
 // import express from "express";
-import { dbConnectionHandler } from "../config/database.js";
-// import dbConnect from "../config/database.js";
+import dbConnect from "../config/database.js";
 import { getToken } from "../middleware/authToken.js";
-import { getSalesURL, searchSalesURL } from "../constants/constURL.js";
+import {
+  getSalesURL,
+  searchItemURL,
+  searchSalesURL,
+} from "../constants/constURL.js";
 // const router = express.Router();
 
 async function responseSearchSalesHandler(accessToken) {
+  //To filter the data by using date. Here, 15 day time interval is taken.
+  const now = new Date();
+  const toDate = now.toISOString();
+  const fromDateObj = new Date(now);
+  fromDateObj.setDate(now.getDate() - 15);
+  const fromDate = fromDateObj.toISOString();
+
   const responseSearchSales = await fetch(searchSalesURL, {
     method: "POST",
     headers: {
@@ -13,15 +23,14 @@ async function responseSearchSalesHandler(accessToken) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      fromDate: "2025-05-13T03:52:13.812Z",
-      toDate: "2025-05-26T03:52:13.812Z",
+      fromDate: fromDate,
+      toDate: toDate,
       dateType: "CREATED",
       facilityCodes: ["GMT_KH"],
     }),
   });
 
   if (!responseSearchSales.ok) {
-    console.log(responseSearchSales);
     throw new Error(
       "Response Status : " + responseSearchSales.status,
       responseSearchSales.message
@@ -29,26 +38,31 @@ async function responseSearchSalesHandler(accessToken) {
   }
 
   const searchSalesData = await responseSearchSales.json();
-  console.log(searchSalesData);
+  // console.log(searchSalesData);
 
   return searchSalesData;
 }
 
-async function fetchInBatches(accessToken, codes, batchSize) {
+async function fetchOrdersDataInBatches(
+  accessToken,
+  getSalesOrSearchItemsURL,
+  codesORItemSkuList,
+  batchSize,
+  bodybuilder
+) {
   let results = [];
-  for (let i = 0; i < codes.length; i += batchSize) {
-    const batch = codes.slice(i, i + batchSize);
+  for (let i = 0; i < codesORItemSkuList.length; i += batchSize) {
+    const batch = codesORItemSkuList.slice(i, i + batchSize);
+
     const fetchPromises = batch.map((code) =>
-      fetch(getSalesURL, {
+      //  Here code is using for mapping the array elements
+      fetch(getSalesOrSearchItemsURL, {
         method: "POST",
         headers: {
           Authorization: `bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          code: code,
-          facilityCodes: ["GMT_KH"],
-        }),
+        body: JSON.stringify(bodybuilder(code)),
         signal: AbortSignal.timeout(15000),
       })
     );
@@ -57,13 +71,22 @@ async function fetchInBatches(accessToken, codes, batchSize) {
     results = results.concat(batchResults);
   }
 
+  // console.log(results);
+
   //checking for failed responses
   const failed = results.filter((val) => !val.ok);
   if (failed.length > 0) {
     const errors = await Promise.all(failed.map((res) => res.text()));
     throw new Error("Some requests failed: " + errors.join("; "));
   }
-  return await Promise.all(results.map((r) => r.json()));
+  const ordersDataOrSearchItemsArrays = await Promise.all(
+    results.map((r) => r.json())
+  );
+
+  const passedOrdersDataOrSearchItemsArray =
+    ordersDataOrSearchItemsArrays.filter((data) => data.successful === true);
+
+  return passedOrdersDataOrSearchItemsArray;
 }
 
 async function fetchAndUpsertAllSaleOrders() {
@@ -75,27 +98,50 @@ async function fetchAndUpsertAllSaleOrders() {
 
     const listOfCode = searchSalesData.elements.map((val) => val.code);
 
+    // console.log(listOfCode);
+
     // Batching for large numbers of API calls
 
-    const ordersDataArray = await fetchInBatches(listOfCode, 10);
-
-    //Parsing All JSON responses
-
-    const passedOrdersDataArray = ordersDataArray.filter(
-      (data) => data.successful === true
+    const passedOrdersDataArray = await fetchOrdersDataInBatches(
+      accessToken,
+      getSalesURL,
+      listOfCode,
+      10,
+      (code) => ({
+        code: code,
+        facilityCodes: ["GMT_KH"],
+      })
     );
-
-   
 
     // Connecting Database
 
-    // client = await dbConnect.connect();
-    client = await dbConnectionHandler();
+    client = await dbConnect.connect();
     await client.query("BEGIN");
 
     //Query for SalesOrder
 
     const saleOrder = passedOrdersDataArray.map((data) => data.saleOrderDTO);
+    //  console.log("sale Order" + saleOrder.length);
+
+    const itemSkuList = passedOrdersDataArray.map(
+      (data) => data.saleOrderDTO.saleOrderItems[0].itemSku
+    );
+
+    // console.log(itemSkuList);
+
+    const searchItemsArray = await fetchOrdersDataInBatches(
+      accessToken,
+      searchItemURL,
+      itemSkuList,
+      10,
+      (code) => ({ productCode: code })
+    );
+
+    const categoryCodeArray = searchItemsArray.map(
+      (category) => category.elements[0].categoryCode
+    );
+
+    // console.log(saleOrder);
 
     const saleOrderQuery = `INSERT INTO "salesOrder" (
 
@@ -145,6 +191,8 @@ async function fetchAndUpsertAllSaleOrders() {
     PacketNumber = EXCLUDED.PacketNumber,
     TrackingNumber = EXCLUDED.TrackingNumber
     RETURNING "orderid";`;
+
+    let index = 0;
 
     for (const saleOrderElement of saleOrder) {
       const values = [
@@ -252,6 +300,9 @@ async function fetchAndUpsertAllSaleOrders() {
 
       const { fulfillmentTat, currencyCode } = saleOrderElement;
       const saleOrderItemObject = saleOrderElement.saleOrderItems[0];
+
+      // console.log(saleOrderItemObject);
+
       // const Id = saleOrderItemObject.id;
 
       const {
@@ -263,7 +314,7 @@ async function fetchAndUpsertAllSaleOrders() {
         itemName,
         sellerSkuCode,
         skudescription,
-        category,
+        // category,
         channelProductId,
         statusCode,
         brand,
@@ -292,7 +343,7 @@ async function fetchAndUpsertAllSaleOrders() {
         itemSku,
         sellerSkuCode,
         skudescription,
-        category,
+        categoryCodeArray[index],
         channelProductId,
         statusCode,
         brand,
@@ -318,9 +369,11 @@ async function fetchAndUpsertAllSaleOrders() {
         saleOrderItemValues
       );
 
-      if (responseSaleOrderItem.rowCount !== 1) {
+      if (!responseSaleOrderItem) {
         throw new Error("saleOrderItem Insertion Failed");
       }
+
+      index = index + 1;
 
       //Inserting table data of billingAddress in Database
 
@@ -401,14 +454,12 @@ email
         billingAddressQuery,
         value
       );
-      if (responseBillingAddress.rowCount !== 1) {
+      if (!responseBillingAddress) {
         throw new Error("Billing Address Insertion Failed");
       }
     }
 
     //Query For shippingPackages
-    // const shippingPackages = saleOrder.map((data)=>data.shippingPackages || []).flat();
-
     const shippingPackagesQuery = `
       INSERT INTO "shippingPackages" (
       code, 
@@ -487,7 +538,7 @@ email
         returnSaleOrderItemsValues
       );
 
-      if (responseReturnSaleOrderItems.rowCount !== 1) {
+      if (!responseReturnSaleOrderItems) {
         throw new Error("ReturnSaleOrderItem Table Insertion Failed");
       }
 
@@ -495,9 +546,6 @@ email
 
       const shippingPackages = saleOrderElement.shippingPackages;
 
-      // if (shippingPackages == []) {
-      //   continue;
-      // }
       if (!Array.isArray(shippingPackages) || shippingPackages.length === 0) {
         continue;
       }
@@ -530,21 +578,16 @@ email
         shippingPackagesQuery,
         shippingPackagesValues
       );
-      if (responseShippingPackage.rowCount !== 1) {
+      if (!responseShippingPackage) {
         throw new Error("Shipping Package Insertion Failed");
       }
     }
 
     await client.query("COMMIT");
     console.log("Table Data inserted Succesfully");
-    // res.json({
-    //   message: "Table Data Inserted Successfully",
-    //   passedData: passedOrdersDataArray,
-    // });
   } catch (error) {
     if (client) client.query("ROLLBACK");
     console.log("Error is :- " + error.message, error.status, error);
-    // res.json({ message: "Table Insertion failed" });
   } finally {
     if (client) client.release();
   }
