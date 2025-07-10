@@ -10,17 +10,17 @@ import refreshSalesOrders from "./routes/fetch.js";
 
 const app = express();
 
-//Middlewares
+// Middlewares
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-//To health check route
+// To health check route
 app.get("/", (req, res) => {
   res.send("API is running");
 });
 
-//For manually triggering
+// For manually triggering
 app.post("/refresh-orders", async (req, res) => {
   try {
     refreshSalesOrders();
@@ -49,5 +49,5 @@ app.listen(port, () => {
   console.log(`Listening at ${port}`);
 });
 
-//Cron will run in the background
+// Cron will run in the background
 runAllCrons();

@@ -26,7 +26,7 @@ async function responseSearchSalesHandler(accessToken) {
       fromDate: fromDate,
       toDate: toDate,
       dateType: "CREATED",
-      facilityCodes: ["GMT_KH"],
+      facilityCodes: ["GMT_KH", "exverge"],
     }),
   });
 
@@ -109,7 +109,7 @@ async function fetchAndUpsertAllSaleOrders() {
       10,
       (code) => ({
         code: code,
-        facilityCodes: ["GMT_KH"],
+        facilityCodes: ["GMT_KH", "exverge"],
       })
     );
 
@@ -118,10 +118,10 @@ async function fetchAndUpsertAllSaleOrders() {
     client = await dbConnect.connect();
     await client.query("BEGIN");
 
-    //Query for SalesOrder
+    // Query for SalesOrder
 
     const saleOrder = passedOrdersDataArray.map((data) => data.saleOrderDTO);
-    //  console.log("sale Order" + saleOrder.length);
+    // console.log("sale Order" + saleOrder.length);
 
     const itemSkuList = passedOrdersDataArray.map(
       (data) => data.saleOrderDTO.saleOrderItems[0].itemSku
@@ -143,27 +143,27 @@ async function fetchAndUpsertAllSaleOrders() {
 
     // console.log(saleOrder);
 
-    const saleOrderQuery = `INSERT INTO "salesOrder" (
+    const saleOrderQuery = `INSERT INTO "sales_order" (
 
-    "Warehouse Identifier",
+    warehouse_identifier,
     code,
-    displayOrderCode,
-    displayorderdatetime,
+    display_order_code,
+    display_order_date_time,
     Channel,
-    ChannelProcessingTime,
+    channel_processing_time,
     Status,
     Created,
     Updated,
-    FulfillmentTat,
-    currencyCode,
-    CustomerCode,
-    CustomerName,
-    CustomerGSTIN,
-    CashOnDelivery,
-    PaymentInstrument,
-    ThirdPartyShipping,
-    PacketNumber,
-    TrackingNumber
+    fulfillment_tat,
+    currency_code,
+    customer_code,
+    customer_name,
+    customer_gstin,
+    cash_on_delivery,
+    payment_instrument,
+    third_party_shipping,
+    packet_number,
+    tracking_number
     ) values (
       $1, $2, $3, to_timestamp($4 / 1000.0), $5,
       $6, $7, to_timestamp($8 / 1000.0), to_timestamp($9 / 1000.0), $10, 
@@ -171,26 +171,26 @@ async function fetchAndUpsertAllSaleOrders() {
       $16, $17, $18, $19
     ) 
     ON CONFLICT (code) DO UPDATE SET
-    "Warehouse Identifier" = EXCLUDED."Warehouse Identifier",
+    warehouse_identifier = EXCLUDED.warehouse_identifier,
     code = EXCLUDED.code,
-    displayOrderCode = EXCLUDED.displayOrderCode,
-    displayorderdatetime = EXCLUDED.displayorderdatetime,
+    display_order_code = EXCLUDED.display_order_code,
+    display_order_date_time = EXCLUDED.display_order_date_time,
     Channel = EXCLUDED.Channel,
-    ChannelProcessingTime = EXCLUDED.ChannelProcessingTime,
+    channel_processing_time = EXCLUDED.channel_processing_time,
     Status = EXCLUDED.Status,
     Created = EXCLUDED.Created,
     Updated = EXCLUDED.Updated,
-    FulfillmentTat = EXCLUDED.FulfillmentTat,
-    currencyCode = EXCLUDED.currencyCode,
-    CustomerCode = EXCLUDED.CustomerCode,
-    CustomerName = EXCLUDED.CustomerName,
-    CustomerGSTIN = EXCLUDED.CustomerGSTIN,
-    CashOnDelivery = EXCLUDED.CashOnDelivery,
-    PaymentInstrument = EXCLUDED.PaymentInstrument,
-    ThirdPartyShipping = EXCLUDED.ThirdPartyShipping,
-    PacketNumber = EXCLUDED.PacketNumber,
-    TrackingNumber = EXCLUDED.TrackingNumber
-    RETURNING "orderid";`;
+    fulfillment_tat = EXCLUDED.fulfillment_tat,
+    currency_code = EXCLUDED.currency_code,
+    customer_code = EXCLUDED.customer_code,
+    customer_name = EXCLUDED.customer_name,
+    customer_gstin = EXCLUDED.customer_gstin,
+    cash_on_delivery = EXCLUDED.cash_on_delivery,
+    payment_instrument = EXCLUDED.payment_instrument,
+    third_party_shipping = EXCLUDED.third_party_shipping,
+    packet_number = EXCLUDED.packet_number,
+    tracking_number = EXCLUDED.tracking_number
+    RETURNING "order_id";`;
 
     let index = 0;
 
@@ -223,42 +223,41 @@ async function fetchAndUpsertAllSaleOrders() {
         throw new Error("SaleOrder Insertion Failed");
       }
 
-      const orderid = responseSaleOrder.rows[0].orderid;
+      const order_id = responseSaleOrder.rows[0].order_id;
 
       //Query for saleOrderItems table.
 
       // console.log(saleOrderItem);
 
-      const saleOrderItemQuery = `INSERT INTO "saleOrderItems" (
-    
-     orderid,
-     ShippingPackageCode, 
-     ShippingPackageStatus,
-     facilitycode,
-     FacilityName,
-     ItemName,
-     ItemSku,
-     SellerSkuCode,
-     skudescription,
+      const saleOrderItemQuery = `INSERT INTO "sale_order_items" (
+     order_id,
+     shipping_package_code, 
+     shipping_package_status,
+     facility_code,
+     facility_name,
+     item_name,
+     item_sku,
+     seller_sku_code,
+     sku_description,
      Category,
-     ChannelProductId,
-     StatusCode,
+     channel_product_id,
+     status_code,
      brand,
-     ShippingMethodCode,
+     shipping_method_code,
      Code,
-     PacketNumber,
-     GiftWrap,
-     CurrencyCode,
-     TaxExempted,
-     FulfillmentTat,
-     TotalPrice,
-     SellingPrice,
-     PrepaidAmount,
+     packet_number,
+     gift_wrap,
+     currency_code,
+     tax_exempted,
+     fulfillment_tat,
+     total_price,
+     selling_price,
+     prepaid_amount,
      Discount,
-     ShippingCharges,
-     StoreCredit,
-     GiftWrapCharges,
-     Cancellable
+     shipping_charges,
+     store_credit,
+     gift_wrap_charges,
+     cancellable
      ) VALUES ( 
       $1, $2, $3, $4, $5,
       $6, $7, $8, $9, $10, 
@@ -268,33 +267,33 @@ async function fetchAndUpsertAllSaleOrders() {
       $23, $24, $25, $26, 
       $27, $28
 ) ON CONFLICT ( code ) DO UPDATE SET
-     orderid = EXCLUDED.orderid,
-     ShippingPackageCode = EXCLUDED.ShippingPackageCode,
-     ShippingPackageStatus = EXCLUDED.ShippingPackageStatus,
-     facilitycode = EXCLUDED.facilitycode,
-     FacilityName = EXCLUDED.FacilityName,
-     ItemName = EXCLUDED.ItemName,
-     ItemSku = EXCLUDED.ItemSku,
-     SellerSkuCode = EXCLUDED.SellerSkuCode,
-     skudescription = EXCLUDED.skudescription,
+     order_id = EXCLUDED.order_id,
+     shipping_package_code = EXCLUDED.shipping_package_code,
+     shipping_package_status = EXCLUDED.shipping_package_status,
+     facility_code = EXCLUDED.facility_code,
+     facility_name = EXCLUDED.facility_name,
+     item_name = EXCLUDED.item_name,
+     item_sku = EXCLUDED.item_sku,
+     seller_sku_code = EXCLUDED.seller_sku_code,
+     sku_description = EXCLUDED.sku_description,
      Category = EXCLUDED.Category,
-     ChannelProductId = EXCLUDED.ChannelProductId,
-     StatusCode = EXCLUDED.StatusCode,
+     channel_product_id = EXCLUDED.channel_product_id,
+     status_code = EXCLUDED.status_code,
      brand = EXCLUDED.brand,
-     ShippingMethodCode = EXCLUDED.ShippingMethodCode,
+     shipping_method_code = EXCLUDED.shipping_method_code,
      Code = EXCLUDED.Code,
-     PacketNumber = EXCLUDED.PacketNumber,
-     GiftWrap = EXCLUDED.GiftWrap,
-     CurrencyCode = EXCLUDED.CurrencyCode,
-     TaxExempted = EXCLUDED.TaxExempted,
-     FulfillmentTat = EXCLUDED.FulfillmentTat,
-     TotalPrice = EXCLUDED.TotalPrice,
-     SellingPrice = EXCLUDED.SellingPrice,
-     PrepaidAmount = EXCLUDED.PrepaidAmount,
+     packet_number = EXCLUDED.packet_number,
+     gift_wrap = EXCLUDED.gift_wrap,
+     currency_code = EXCLUDED.currency_code,
+     tax_exempted = EXCLUDED.tax_exempted,
+     fulfillment_tat = EXCLUDED.fulfillment_tat,
+     total_price = EXCLUDED.total_price,
+     selling_price = EXCLUDED.selling_price,
+     prepaid_amount = EXCLUDED.prepaid_amount,
      Discount = EXCLUDED.Discount,
-     ShippingCharges = EXCLUDED.ShippingCharges,
-     StoreCredit = EXCLUDED.StoreCredit,
-     GiftWrapCharges = EXCLUDED.GiftWrapCharges,
+     shipping_charges = EXCLUDED.shipping_charges,
+     store_credit = EXCLUDED.store_credit,
+     gift_wrap_charges = EXCLUDED.gift_wrap_charges,
      Cancellable = EXCLUDED.Cancellable
 `;
 
@@ -334,7 +333,7 @@ async function fetchAndUpsertAllSaleOrders() {
       } = saleOrderItemObject;
 
       const saleOrderItemValues = [
-        orderid,
+        order_id,
         shippingPackageCode,
         shippingPackageStatus,
         facilityCode,
@@ -378,12 +377,12 @@ async function fetchAndUpsertAllSaleOrders() {
       //Inserting table data of billingAddress in Database
 
       // Insertion Query for billing address
-      const billingAddressQuery = `INSERT INTO "billingAddress"(
-customercode,
-orderid,
+      const billingAddressQuery = `INSERT INTO "billing_address"(
+order_id,
+customer_code,
 name,
-addressline1,
-addressline2,
+address_line_1,
+address_line_2,
 latitude,
 longitude,
 city,
@@ -398,12 +397,12 @@ email
   $9, $10, $11, $12, 
   $13
 )   
-    ON CONFLICT (customercode) DO UPDATE SET
-    customercode = EXCLUDED.customercode,
-    orderid = EXCLUDED.orderid,
+    ON CONFLICT (customer_code) DO UPDATE SET
+    order_id = EXCLUDED.order_id,
+    customer_code = EXCLUDED.customer_code,
     name = EXCLUDED.name,
-    addressline1 = EXCLUDED.addressline1,
-    addressline2 = EXCLUDED.addressline2,
+    address_line_1 = EXCLUDED.address_line_1,
+    address_line_2 = EXCLUDED.address_line_2,
     latitude = EXCLUDED.latitude,
     longitude = EXCLUDED.longitude,
     city = EXCLUDED.city,
@@ -432,8 +431,8 @@ email
       // console.log(id);
 
       const value = [
+        order_id,
         id,
-        orderid,
         name === "" || name === "********" ? null : name,
         addressLine1 === "" || addressLine1 === "********"
           ? null
@@ -461,64 +460,64 @@ email
 
     //Query For shippingPackages
     const shippingPackagesQuery = `
-      INSERT INTO "shippingPackages" (
+      INSERT INTO "shipping_packages" (
       code, 
-      saleOrderCode, 
+      sale_order_code, 
       channel, 
       status, 
-      shippingPackageType,
-      shippingProvider, 
-      shippingMethod, 
-      estimatedWeight, 
-      actualWeight,
+      shipping_package_type,
+      shipping_provider, 
+      shipping_method, 
+      estimated_weight, 
+      actual_weight,
       customer, 
       created, 
       updated, 
       dispatched, 
       delivered,
       invoice, 
-      invoiceCode, 
-      invoiceDisplayCode, 
-      noofitems
+      invoice_code, 
+      invoice_display_code, 
+      no_of_items
     ) VALUES (
       $1, $2, $3, $4, $5,
       $6, $7, $8, $9,
       $10, to_timestamp($11 / 1000.0), to_timestamp($12 / 1000.0), $13, $14,
       $15, $16, $17, $18
-    ) ON CONFLICT ( saleOrderCode ) DO UPDATE SET
+    ) ON CONFLICT ( sale_order_code ) DO UPDATE SET
       code = EXCLUDED.code, 
-      saleOrderCode = EXCLUDED.saleOrderCode, 
+      sale_order_code = EXCLUDED.sale_order_code, 
       channel = EXCLUDED.channel, 
       status = EXCLUDED.status, 
-      shippingPackageType = EXCLUDED.shippingPackageType,
-      shippingProvider= EXCLUDED.shippingProvider, 
-      shippingMethod= EXCLUDED.shippingMethod, 
-      estimatedWeight= EXCLUDED.estimatedWeight, 
-      actualWeight= EXCLUDED.actualWeight,
+      shipping_package_type = EXCLUDED.shipping_package_type,
+      shipping_provider= EXCLUDED.shipping_provider, 
+      shipping_method= EXCLUDED.shipping_method, 
+      estimated_weight= EXCLUDED.estimated_weight, 
+      actual_weight= EXCLUDED.actual_weight,
       customer= EXCLUDED.customer, 
       created= EXCLUDED.created, 
       updated= EXCLUDED.updated, 
       dispatched= EXCLUDED.dispatched, 
       delivered= EXCLUDED.delivered,
       invoice= EXCLUDED.invoice, 
-      invoiceCode= EXCLUDED.invoiceCode, 
-      invoiceDisplayCode= EXCLUDED.invoiceDisplayCode, 
-      noofitems= EXCLUDED.noofitems
+      invoice_code= EXCLUDED.invoice_code, 
+      invoice_display_code= EXCLUDED.invoice_display_code, 
+      no_of_items= EXCLUDED.no_of_items
    `;
 
     //  Query for returnSaleOrderItems
 
-    const returnSaleOrderQuery = `INSERT INTO "returnSaleOrderItems"(
-    saleordercode,
-    saleorderitems,
+    const returnSaleOrderQuery = `INSERT INTO "return_sale_order_items"(
+    sale_order_code,
+    sale_order_items,
     code
     ) VALUES (
     $1,
     $2,
     $3
-    ) ON CONFLICT ( saleOrderCode ) DO UPDATE SET
-      saleordercode = EXCLUDED.saleordercode,
-      saleorderitems = EXCLUDED.saleorderitems,
+    ) ON CONFLICT ( sale_order_code ) DO UPDATE SET
+      sale_order_code = EXCLUDED.sale_order_code,
+      sale_order_items = EXCLUDED.sale_order_items,
       code = EXCLUDED.code
   `;
 
