@@ -23,7 +23,7 @@ app.get("/", (req, res) => {
 // For manually triggering
 app.post("/refresh-orders", async (req, res) => {
   try {
-    refreshSalesOrders();
+    await refreshSalesOrders();
     res.json({ message: "Orders Refreshed Succesfully" });
   } catch (e) {
     console.error(e);

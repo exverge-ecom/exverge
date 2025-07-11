@@ -13,7 +13,7 @@ async function responseSearchSalesHandler(accessToken) {
   const now = new Date();
   const toDate = now.toISOString();
   const fromDateObj = new Date(now);
-  fromDateObj.setDate(now.getDate() - 15);
+  fromDateObj.setDate(now.getDate() - 2);
   const fromDate = fromDateObj.toISOString();
 
   const responseSearchSales = await fetch(searchSalesURL, {
@@ -64,6 +64,9 @@ async function fetchOrdersDataInBatches(
         },
         body: JSON.stringify(bodybuilder(code)),
         signal: AbortSignal.timeout(15000),
+      }).then(async (res) => {
+        const data = await res.json().catch(() => null);
+        return data;
       })
     );
 
@@ -74,17 +77,18 @@ async function fetchOrdersDataInBatches(
   // console.log(results);
 
   //checking for failed responses
-  const failed = results.filter((val) => !val.ok);
-  if (failed.length > 0) {
-    const errors = await Promise.all(failed.map((res) => res.text()));
-    throw new Error("Some requests failed: " + errors.join("; "));
-  }
-  const ordersDataOrSearchItemsArrays = await Promise.all(
-    results.map((r) => r.json())
-  );
+  // const failed = results.filter((val) => !val.ok);
+  // if (failed.length > 0) {
+  //   const errors = await Promise.all(failed.map((res) =>res));
+  //   throw new Error("Some requests failed: " + errors.join("; "));
+  // }
+  // const ordersDataOrSearchItemsArrays = await Promise.all(
+  //   results.map((data) => data.json())
+  // );
 
-  const passedOrdersDataOrSearchItemsArray =
-    ordersDataOrSearchItemsArrays.filter((data) => data.successful === true);
+  const passedOrdersDataOrSearchItemsArray = results.filter(
+    (data) => data.successful === true
+  );
 
   return passedOrdersDataOrSearchItemsArray;
 }
@@ -592,15 +596,25 @@ email
   }
 }
 
-function refreshSalesOrders() {
+async function refreshSalesOrders() {
   console.log("Refreshing Sales orders");
 
-  fetchAndUpsertAllSaleOrders()
-    .then(() => console.log("Orders Refreshed Successfully"))
-    .catch((e) => {
-      console.error("Orders Refreshing Failed");
-      console.error(e);
-    });
+
+  try {
+    await fetchAndUpsertAllSaleOrders();
+    console.log("Orders Refreshed Successfully");
+  } catch (e) {
+    console.error("Orders Refreshing Failed");
+    console.error(e);
+    throw e; // rethrow so the route handler can catch it
+  }
+
+  // fetchAndUpsertAllSaleOrders()
+  //   .then(() => console.log("Orders Refreshed Successfully"))
+  //   .catch((e) => {
+  //     console.error("Orders Refreshing Failed");
+  //     console.error(e);
+  //   });
 }
 
 export default refreshSalesOrders;

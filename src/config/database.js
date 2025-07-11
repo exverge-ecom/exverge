@@ -10,19 +10,20 @@ const { Pool } = pg;
 
 //database connection
 const dbConnect = new Pool({
-host:"oms-dashboard.postgres.database.azure.com", 
-user:"exverge", 
-password:"Development@22", 
-database:"UniwareDB", 
-port:5432, 
-ssl:{ rejectUnauthorized: false },
+  host: "oms-dashboard.postgres.database.azure.com",
+  user: "exverge",
+  password: "Development@22",
+  database: "UniwareDB",
+  port: 5432,
+  ssl: { rejectUnauthorized: false },
+
 
   // host: process.env.DB_HOST,
   // user: process.env.DB_USER,
   // password: process.env.DB_PASSWORD,
   // database: process.env.DB_NAME,
   // port: parseInt(process.env.DB_PORT),
-  // ssl: { rejectUnauthorized: false }  
+  // ssl: { rejectUnauthorized: false }
 });
 
 dbConnect.on("error", (err) => {
