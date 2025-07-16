@@ -13,7 +13,7 @@ async function responseSearchSalesHandler(accessToken) {
   const now = new Date();
   const toDate = now.toISOString();
   const fromDateObj = new Date(now);
-  fromDateObj.setDate(now.getDate() - 2);
+  fromDateObj.setDate(now.getDate() - 15);
   const fromDate = fromDateObj.toISOString();
 
   const responseSearchSales = await fetch(searchSalesURL, {
@@ -209,7 +209,7 @@ async function fetchAndUpsertAllSaleOrders() {
         saleOrderElement?.status || null,
         saleOrderElement.created,
         saleOrderElement?.updated,
-        saleOrderElement?.fulfillmentTat || null,
+        new Date(saleOrderElement?.fulfillmentTat).toISOString() || null,  
         saleOrderElement?.currencyCode || null,
         saleOrderElement?.customerCode || null,
         saleOrderElement?.customerName || null,
@@ -567,8 +567,8 @@ email
         shippingPackagesObject?.estimatedWeight,
         shippingPackagesObject?.actualWeight,
         shippingPackagesObject?.customer,
-        shippingPackagesObject?.created|| null,
-        shippingPackagesObject?.updated|| null,
+        shippingPackagesObject?.created || null,
+        shippingPackagesObject?.updated || null,
         shippingPackagesObject?.dispatched || null,
         shippingPackagesObject?.delivered || null,
         shippingPackagesObject?.invoice,
