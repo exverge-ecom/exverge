@@ -205,7 +205,7 @@ async function fetchAndUpsertAllSaleOrders() {
         saleOrderElement?.displayOrderCode,
         saleOrderElement?.displayOrderDateTime,
         saleOrderElement?.channel || null,
-        saleOrderElement?.channelProcessingTime || null,
+        new Date(saleOrderElement?.channelProcessingTime).toISOString() || null,
         saleOrderElement?.status || null,
         saleOrderElement.created,
         saleOrderElement?.updated,
