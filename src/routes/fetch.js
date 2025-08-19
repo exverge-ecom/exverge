@@ -13,7 +13,7 @@ async function responseSearchSalesHandler(accessToken) {
   const now = new Date();
   const toDate = now.toISOString();
   const fromDateObj = new Date(now);
-  fromDateObj.setDate(now.getDate() - 15);
+  fromDateObj.setDate(now.getDate() - 30);
   const fromDate = fromDateObj.toISOString();
 
   const responseSearchSales = await fetch(searchSalesURL, {
@@ -382,25 +382,25 @@ async function fetchAndUpsertAllSaleOrders() {
 
       // Insertion Query for billing address
       const billingAddressQuery = `INSERT INTO "billing_address"(
-order_id,
-customer_code,
-name,
-address_line_1,
-address_line_2,
-latitude,
-longitude,
-city,
-state,
-country,
-pincode,
-phone,
-email
-) VALUES (
-  $1, $2, $3, $4, 
-  $5, $6, $7, $8, 
-  $9, $10, $11, $12, 
-  $13
-)   
+     order_id,
+     customer_code,
+     name,
+     address_line_1,
+     address_line_2,
+     latitude,
+     longitude,
+     city,
+     state,
+     country,
+     pincode,
+     phone,
+     email
+    ) VALUES (
+     $1, $2, $3, $4, 
+     $5, $6, $7, $8, 
+     $9, $10, $11, $12, 
+     $13
+    )   
     ON CONFLICT (customer_code) DO UPDATE SET
     order_id = EXCLUDED.order_id,
     customer_code = EXCLUDED.customer_code,
