@@ -164,7 +164,7 @@ async function fetchAndUpsertAllSaleOrders() {
     tracking_number
     ) values (
       $1, $2, $3, to_timestamp($4 / 1000.0), $5,
-      $6, $7, to_timestamp($8 / 1000.0), to_timestamp($9 / 1000.0), $10, 
+      to_timestamp($6/ 1000), $7, to_timestamp($8 / 1000.0), to_timestamp($9 / 1000.0), to_timestamp($10/ 1000), 
       $11, $12, $13, $14, $15, 
       $16, $17, $18, $19
     ) 
@@ -225,7 +225,7 @@ async function fetchAndUpsertAllSaleOrders() {
       $6, $7, $8, $9, $10, 
       $11, $12, $13, $14,
       $15, $16, $17, $18, 
-      $19, $20, $21, $22, 
+      $19, to_timestamp($20/ 1000), $21, $22, 
       $23, $24, $25, $26, 
       $27, $28
 ) ON CONFLICT ( code ) DO UPDATE SET
@@ -349,11 +349,11 @@ async function fetchAndUpsertAllSaleOrders() {
         saleOrderElement?.displayOrderCode,
         saleOrderElement?.displayOrderDateTime,
         saleOrderElement?.channel || null,
-        new Date(saleOrderElement?.channelProcessingTime).toISOString() || null,
+        saleOrderElement?.channelProcessingTime,
         saleOrderElement?.status || null,
         saleOrderElement.created,
         saleOrderElement?.updated,
-        new Date(saleOrderElement?.fulfillmentTat).toISOString() || null,
+        saleOrderElement?.fulfillmentTat,
         saleOrderElement?.currencyCode || null,
         saleOrderElement?.customerCode || null,
         saleOrderElement?.customerName || null,
@@ -364,186 +364,175 @@ async function fetchAndUpsertAllSaleOrders() {
         saleOrderElement?.packetNumber || null,
         saleOrderElement?.trackingNumber || null,
       ];
-
-      const responseSaleOrder = await client.query(saleOrderQuery, values);
-
-      if (responseSaleOrder.rowCount !== 1) {
-        throw new Error("SaleOrder Insertion Failed");
-      }
-      // console.log(responseSaleOrder);
-
-      const order_id = responseSaleOrder.rows[0].order_id;
-
-      //Query for saleOrderItems table.
-
-      // console.log(saleOrderItem);
-
-      const { fulfillmentTat, currencyCode } = saleOrderElement;
-      // const saleOrderItemObject = saleOrderElement.saleOrderItems[0];
-
-      for (const saleOrderItemElements of saleOrderElement.saleOrderItems) {
-        // console.log(saleOrderItemObject);
-
-        // const Id = saleOrderItemObject.id;
-
-        const {
-          shippingPackageCode,
-          shippingPackageStatus,
-          facilityCode,
-          facilityName,
-          itemSku,
-          itemName,
-          sellerSkuCode,
-          skudescription,
-          // category,
-          channelProductId,
-          statusCode,
-          brand,
-          shippingMethodCode,
-          code,
-          packetNumber,
-          giftWrap,
-          taxPercentage,
-          totalPrice,
-          sellingPrice,
-          prepaidAmount,
-          discount,
-          shippingCharges,
-          storeCredit,
-          giftWrapCharges,
-          cancellable,
-        } = saleOrderItemElements;
-
-        const saleOrderItemValues = [
-          order_id,
-          code,
-          shippingPackageCode,
-          shippingPackageStatus,
-          facilityCode,
-          facilityName,
-          itemName,
-          itemSku,
-          sellerSkuCode,
-          skudescription,
-          categoryCodeArray[index],
-          channelProductId,
-          statusCode,
-          brand,
-          shippingMethodCode,
-          packetNumber,
-          giftWrap || null,
-          currencyCode,
-          taxPercentage,
-          new Date(fulfillmentTat).toISOString() || null,
-          totalPrice,
-          sellingPrice,
-          prepaidAmount,
-          discount,
-          shippingCharges,
-          storeCredit,
-          giftWrapCharges,
-          cancellable,
-        ];
-
-        const responseSaleOrderItem = await client.query(
-          saleOrderItemQuery,
-          saleOrderItemValues
-        );
-
-        if (!responseSaleOrderItem) {
-          throw new Error("saleOrderItem Insertion Failed");
+      try {
+        const responseSaleOrder = await client.query(saleOrderQuery, values);
+        if (responseSaleOrder.rowCount !== 1) {
+          throw new Error("SaleOrder Insertion Failed");
         }
-      }
+        const order_id = responseSaleOrder.rows[0].order_id;
 
-      index = index + 1;
+        const { fulfillmentTat, currencyCode } = saleOrderElement;
+        for (const saleOrderItemElements of saleOrderElement.saleOrderItems) {
+          const {
+            shippingPackageCode,
+            shippingPackageStatus,
+            facilityCode,
+            facilityName,
+            itemSku,
+            itemName,
+            sellerSkuCode,
+            skudescription,
+            channelProductId,
+            statusCode,
+            brand,
+            shippingMethodCode,
+            code,
+            packetNumber,
+            giftWrap,
+            taxPercentage,
+            totalPrice,
+            sellingPrice,
+            prepaidAmount,
+            discount,
+            shippingCharges,
+            storeCredit,
+            giftWrapCharges,
+            cancellable,
+          } = saleOrderItemElements;
 
-      //Inserting table data of billingAddress in Database
+          const saleOrderItemValues = [
+            order_id,
+            code,
+            shippingPackageCode,
+            shippingPackageStatus,
+            facilityCode,
+            facilityName,
+            itemName,
+            itemSku,
+            sellerSkuCode,
+            skudescription,
+            categoryCodeArray[index],
+            channelProductId,
+            statusCode,
+            brand,
+            shippingMethodCode,
+            packetNumber,
+            giftWrap || null,
+            currencyCode,
+            taxPercentage,
+            fulfillmentTat,
+            totalPrice,
+            sellingPrice,
+            prepaidAmount,
+            discount,
+            shippingCharges,
+            storeCredit,
+            giftWrapCharges,
+            cancellable,
+          ];
+          try {
+            const responseSaleOrderItem = await client.query(
+              saleOrderItemQuery,
+              saleOrderItemValues
+            );
+            if (!responseSaleOrderItem) {
+              throw new Error("saleOrderItem Insertion Failed");
+            }
+          } catch (err) {
+            console.error(`Error inserting saleOrderItem: code=${code}, itemSku=${itemSku}, fulfillmentTat=${fulfillmentTat}`);
+            throw err;
+          }
+        }
 
-      // Insertion Query for billing address
+        index = index + 1;
 
-      //Destructuring the Object for keys.
-      const {
-        name,
-        address_line_1,
-        address_line_2,
-        latitude,
-        longitude,
-        city,
-        state,
-        country,
-        pincode,
-        phone,
-        email,
-      } = saleOrderElement.billingAddress;
-      // console.log(id);
+        // Billing Address
+        const {
+          name,
+          address_line_1,
+          address_line_2,
+          latitude,
+          longitude,
+          city,
+          state,
+          country,
+          pincode,
+          phone,
+          email,
+        } = saleOrderElement.billingAddress;
+        const value = [
+          order_id,
+          name === "" || name === "********" ? null : name,
+          address_line_1 === "" || address_line_1 === "********"
+            ? null
+            : address_line_1,
+          address_line_2 === "" || address_line_2 === "********"
+            ? null
+            : address_line_2,
+          latitude === "" || latitude === "********" ? null : latitude,
+          longitude === "" || longitude === "********" ? null : longitude,
+          city,
+          state,
+          country,
+          pincode,
+          phone === "" || phone === "********" ? null : phone,
+          email === "" || email === "********" ? null : email,
+        ];
+        try {
+          const responseBillingAddress = await client.query(
+            billingAddressQuery,
+            value
+          );
+          if (!responseBillingAddress) {
+            throw new Error("Billing Address Insertion Failed");
+          }
+        } catch (err) {
+          console.error(`Error inserting billingAddress: order_id=${order_id}, name=${name}`);
+          throw err;
+        }
 
-      const value = [
-        order_id,
-        name === "" || name === "********" ? null : name,
-        address_line_1 === "" || address_line_1 === "********"
-          ? null
-          : address_line_1,
-        address_line_2 === "" || address_line_2 === "********"
-          ? null
-          : address_line_2,
-        latitude === "" || latitude === "********" ? null : latitude,
-        longitude === "" || longitude === "********" ? null : longitude,
-        city,
-        state,
-        country,
-        pincode,
-        phone === "" || phone === "********" ? null : phone,
-        email === "" || email === "********" ? null : email,
-      ];
-      const responseBillingAddress = await client.query(
-        billingAddressQuery,
-        value
-      );
-      if (!responseBillingAddress) {
-        throw new Error("Billing Address Insertion Failed");
-      }
-      // }
-
-      // const sale_order_code = responseSaleOrder.rows[0].code;
-
-      //Inserting shippingPackage Data into Database
-
-      const shippingPackages = saleOrderElement.shippingPackages;
-
-      if (!Array.isArray(shippingPackages) || shippingPackages.length === 0) {
-        continue;
-      }
-
-      const shippingPackagesObject = shippingPackages[0];
-      // console.log(shippingPackagesObject);
-
-      const shippingPackagesValues = [
-        shippingPackagesObject?.code || null,
-        shippingPackagesObject?.saleOrderCode || null,
-        shippingPackagesObject?.channel || null,
-        shippingPackagesObject?.status || null,
-        shippingPackagesObject?.shippingPackageType || null,
-        shippingPackagesObject?.shippingProvider || null,
-        shippingPackagesObject?.shippingMethod,
-        shippingPackagesObject?.estimatedWeight,
-        shippingPackagesObject?.actualWeight,
-        shippingPackagesObject?.customer,
-        shippingPackagesObject?.created || null,
-        shippingPackagesObject?.updated || null,
-        new Date(shippingPackagesObject?.dispatched).toISOString() || null,
-        new Date(shippingPackagesObject?.delivered).toISOString() || null,
-        shippingPackagesObject?.invoice,
-        shippingPackagesObject?.invoiceCode || null,
-        shippingPackagesObject?.invoiceDisplayCode || null,
-        shippingPackagesObject?.noOfItems,
-      ];
-
-      const responseShippingPackage = await client.query(
-        shippingPackagesQuery,
-        shippingPackagesValues
-      );
-      if (!responseShippingPackage) {
-        throw new Error("Shipping Package Insertion Failed");
+        // Shipping Packages
+        const shippingPackages = saleOrderElement.shippingPackages;
+        if (!Array.isArray(shippingPackages) || shippingPackages.length === 0) {
+          continue;
+        }
+        const shippingPackagesObject = shippingPackages[0];
+        const shippingPackagesValues = [
+          shippingPackagesObject?.code || null,
+          shippingPackagesObject?.saleOrderCode || null,
+          shippingPackagesObject?.channel || null,
+          shippingPackagesObject?.status || null,
+          shippingPackagesObject?.shippingPackageType || null,
+          shippingPackagesObject?.shippingProvider || null,
+          shippingPackagesObject?.shippingMethod,
+          shippingPackagesObject?.estimatedWeight,
+          shippingPackagesObject?.actualWeight,
+          shippingPackagesObject?.customer,
+          shippingPackagesObject?.created,
+          shippingPackagesObject?.updated,
+          shippingPackagesObject?.dispatched,
+          shippingPackagesObject?.delivered,
+          shippingPackagesObject?.invoice,
+          shippingPackagesObject?.invoiceCode || null,
+          shippingPackagesObject?.invoiceDisplayCode || null,
+          shippingPackagesObject?.noOfItems,
+        ];
+        try {
+          const responseShippingPackage = await client.query(
+            shippingPackagesQuery,
+            shippingPackagesValues
+          );
+          if (!responseShippingPackage) {
+            throw new Error("Shipping Package Insertion Failed");
+          }
+        } catch (err) {
+          console.error(`Error inserting shippingPackage: code=${shippingPackagesObject?.code}, saleOrderCode=${shippingPackagesObject?.saleOrderCode}`);
+          throw err;
+        }
+      } catch (err) {
+        // Log which saleOrderElement failed
+        console.error(`Error inserting saleOrder: code=${saleOrderElement?.code}, displayOrderDateTime=${saleOrderElement?.displayOrderDateTime}`);
+        throw err;
       }
     }
     await client.query("COMMIT");
@@ -567,13 +556,6 @@ async function refreshSalesOrders() {
     console.error(e);
     throw e; // rethrow so the route handler can catch it
   }
-
-  // fetchAndUpsertAllSaleOrders()
-  //   .then(() => console.log("Orders Refreshed Successfully"))
-  //   .catch((e) => {
-  //     console.error("Orders Refreshing Failed");
-  //     console.error(e);
-  //   });
 }
 
 export default refreshSalesOrders;

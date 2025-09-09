@@ -322,15 +322,21 @@ return_status= EXCLUDED.return_status,
           returnSaleOrderItemsElement?.returnRemarks || null,
         ];
         //  console.log(returnSaleOrderItemsElement);
+        try {
+          const responseReturnSaleOrderItems = await client.query(
+            returnSaleOrderItemsQuery,
+            returnSaleOrderItemsElementValues
+          );
+          // console.log(responseReturnSaleOrderItems);
 
-        const responseReturnSaleOrderItems = await client.query(
-          returnSaleOrderItemsQuery,
-          returnSaleOrderItemsElementValues
-        );
-        // console.log(responseReturnSaleOrderItems);
-
-        if (responseReturnSaleOrderItems.rowCount !== 1) {
-          throw new Error("returnSaleOrderItems Insertion Failed");
+          if (responseReturnSaleOrderItems.rowCount !== 1) {
+            throw new Error("returnSaleOrderItems Insertion Failed");
+          }
+        } catch (err) {
+          console.error(
+            `Error inserting returnSaleOrderItems: ${returningSaleOrderCode}, saleORderItemCode : ${returnSaleOrderItemsElement?.saleOrderItemCode}`
+          );
+          throw err;
         }
       }
 
@@ -352,14 +358,22 @@ return_status= EXCLUDED.return_status,
           returnAddressDetailsListElement?.longitude || null,
           returnAddressDetailsListElement?.type,
         ];
+        try {
+          const responseReturnAddressDetailsList = await client.query(
+            returnAddressDetailsListQuery,
+            returnAddressDetailsListElementValue
+          );
 
-        const responseReturnAddressDetailsList = await client.query(
-          returnAddressDetailsListQuery,
-          returnAddressDetailsListElementValue
-        );
-
-        if (responseReturnAddressDetailsList.rowCount !== 1) {
-          throw new Error("returnAddressDetailsList Insertion Failed");
+          if (responseReturnAddressDetailsList.rowCount !== 1) {
+            throw new Error("returnAddressDetailsList Insertion Failed");
+          }
+        } catch (err) {
+          console.error(
+            "Return Address Details List  Insertion failed" +
+              "returningSaleOrdercode" +
+              returningSaleOrderCode
+          );
+          throw err;
         }
       }
 
