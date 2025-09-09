@@ -7,6 +7,8 @@ import { runAllCrons } from "./schedulars/schedular.js";
 
 import process from "process";
 import refreshSalesOrders from "./routes/fetch.js";
+import refreshReturnSaleOrder from "./routes/return.js";
+// import fetchAndUpsertAllReturnsItems from "./routes/return.js";
 
 const app = express();
 
@@ -24,6 +26,8 @@ app.get("/", (req, res) => {
 app.post("/refresh-orders", async (req, res) => {
   try {
     await refreshSalesOrders();
+    await refreshReturnSaleOrder();
+    // await fetchAndUpsertAllReturnsItems();
     res.json({ message: "Orders Refreshed Succesfully" });
   } catch (e) {
     console.error(e);

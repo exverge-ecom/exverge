@@ -13,3 +13,9 @@ export const getSalesURL =
 
 export const searchItemURL =
   "https://exverge.unicommerce.co.in/services/rest/v1/product/itemType/search";
+
+export const searchReturnItemURL = 
+"https://exverge.unicommerce.co.in/services/rest/v1/oms/return/search";
+
+export const getReturnItemURL =
+"https://exverge.unicommerce.co.in/services/rest/v1/oms/return/get";

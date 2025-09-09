@@ -15,8 +15,18 @@ const dbConnect = new Pool({
   password: "Development@22",
   database: "UniwareDB",
   port: 5432,
-  ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: false },  
 
+
+
+
+  // host: "localhost",
+  // user: "postgres",
+  // port: 5432,
+  // password: "Shriyam@20",
+  // database: "UniwareDB"
+
+ 
 
   // host: process.env.DB_HOST,
   // user: process.env.DB_USER,
