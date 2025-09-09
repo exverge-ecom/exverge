@@ -133,7 +133,7 @@ async function fetchAndUpsertAllSaleOrders() {
       (category) => category.elements[0].categoryCode
     );
 
-    console.log(categoryCodeArray);
+    // console.log(categoryCodeArray);
 
     // console.log(saleOrder);
     client = await dbConnect.connect();
