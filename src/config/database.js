@@ -17,14 +17,18 @@ const dbConnect = new Pool({
   port: 5432,
   ssl: { rejectUnauthorized: false },  
 
-
-
-
+   
   // host: "localhost",
   // user: "postgres",
   // port: 5432,
   // password: "Shriyam@20",
   // database: "UniwareDB"
+
+
+
+
+
+
 
  
 

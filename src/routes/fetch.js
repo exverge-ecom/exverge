@@ -133,7 +133,7 @@ async function fetchAndUpsertAllSaleOrders() {
       (category) => category.elements[0].categoryCode
     );
 
-    // console.log(categoryCodeArray);
+    console.log(categoryCodeArray);
 
     // console.log(saleOrder);
     client = await dbConnect.connect();
@@ -317,7 +317,7 @@ async function fetchAndUpsertAllSaleOrders() {
     ) VALUES (
       $1, $2, $3, $4, $5,
       $6, $7, $8, $9,
-      $10, to_timestamp($11 / 1000.0), to_timestamp($12 / 1000.0), $13, $14,
+      $10, to_timestamp($11 / 1000.0), to_timestamp($12 / 1000.0), to_timestamp($13/ 1000), to_timestamp($14/ 1000),
       $15, $16, $17, $18
     ) ON CONFLICT ( sale_order_code ) DO UPDATE SET
       code = EXCLUDED.code, 
