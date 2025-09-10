@@ -164,7 +164,7 @@ async function fetchAndUpsertAllSaleOrders() {
     tracking_number
     ) values (
       $1, $2, $3, to_timestamp($4 / 1000.0), $5,
-      to_timestamp($6/ 1000), $7, to_timestamp($8 / 1000.0), to_timestamp($9 / 1000.0), to_timestamp($10/ 1000), 
+      to_timestamp($6/ 1000.0), $7, to_timestamp($8 / 1000.0), to_timestamp($9 / 1000.0), to_timestamp($10/ 1000.0), 
       $11, $12, $13, $14, $15, 
       $16, $17, $18, $19
     ) 
@@ -225,7 +225,7 @@ async function fetchAndUpsertAllSaleOrders() {
       $6, $7, $8, $9, $10, 
       $11, $12, $13, $14,
       $15, $16, $17, $18, 
-      $19, to_timestamp($20/ 1000), $21, $22, 
+      $19, to_timestamp($20/ 1000.0), $21, $22, 
       $23, $24, $25, $26, 
       $27, $28
 ) ON CONFLICT ( code ) DO UPDATE SET
@@ -317,7 +317,7 @@ async function fetchAndUpsertAllSaleOrders() {
     ) VALUES (
       $1, $2, $3, $4, $5,
       $6, $7, $8, $9,
-      $10, to_timestamp($11 / 1000.0), to_timestamp($12 / 1000.0), to_timestamp($13/ 1000), to_timestamp($14/ 1000),
+      $10, to_timestamp($11 / 1000.0), to_timestamp($12 / 1000.0), to_timestamp($13/ 1000.0), to_timestamp($14/ 1000.0),
       $15, $16, $17, $18
     ) ON CONFLICT ( sale_order_code ) DO UPDATE SET
       code = EXCLUDED.code, 
@@ -343,7 +343,7 @@ async function fetchAndUpsertAllSaleOrders() {
     let index = 0;
 
     for (const saleOrderElement of saleOrder) {
-      const values = [
+      const saleOrderValues = [
         saleOrderElement?.saleOrderItems[0]?.facilityCode || null,
         saleOrderElement?.code,
         saleOrderElement?.displayOrderCode,
@@ -365,7 +365,10 @@ async function fetchAndUpsertAllSaleOrders() {
         saleOrderElement?.trackingNumber || null,
       ];
       try {
-        const responseSaleOrder = await client.query(saleOrderQuery, values);
+        const responseSaleOrder = await client.query(
+          saleOrderQuery,
+          saleOrderValues
+        );
         if (responseSaleOrder.rowCount !== 1) {
           throw new Error("SaleOrder Insertion Failed");
         }
@@ -439,7 +442,10 @@ async function fetchAndUpsertAllSaleOrders() {
               throw new Error("saleOrderItem Insertion Failed");
             }
           } catch (err) {
-            console.error(`Error inserting saleOrderItem: code=${code}, itemSku=${itemSku}, fulfillmentTat=${fulfillmentTat}`);
+            console.error(`Error in inserting SaleOrderItem`, {
+              values: saleOrderItemValues,
+              error: err.message,
+            });
             throw err;
           }
         }
@@ -460,7 +466,7 @@ async function fetchAndUpsertAllSaleOrders() {
           phone,
           email,
         } = saleOrderElement.billingAddress;
-        const value = [
+        const billingAddressValue = [
           order_id,
           name === "" || name === "********" ? null : name,
           address_line_1 === "" || address_line_1 === "********"
@@ -481,13 +487,16 @@ async function fetchAndUpsertAllSaleOrders() {
         try {
           const responseBillingAddress = await client.query(
             billingAddressQuery,
-            value
+            billingAddressValue
           );
           if (!responseBillingAddress) {
             throw new Error("Billing Address Insertion Failed");
           }
         } catch (err) {
-          console.error(`Error inserting billingAddress: order_id=${order_id}, name=${name}`);
+          console.error(`Error in inserting billingAddress`, {
+            values: billingAddressValue,
+            error: err.message,
+          });
           throw err;
         }
 
@@ -526,12 +535,18 @@ async function fetchAndUpsertAllSaleOrders() {
             throw new Error("Shipping Package Insertion Failed");
           }
         } catch (err) {
-          console.error(`Error inserting shippingPackage: code=${shippingPackagesObject?.code}, saleOrderCode=${shippingPackagesObject?.saleOrderCode}`);
+          console.error(`Error in inserting ShippingPackages`, {
+            values: shippingPackagesValues,
+            error: err.message,
+          });
           throw err;
         }
       } catch (err) {
         // Log which saleOrderElement failed
-        console.error(`Error inserting saleOrder: code=${saleOrderElement?.code}, displayOrderDateTime=${saleOrderElement?.displayOrderDateTime}`);
+        console.error(`Error in inserting SaleOrder`, {
+          values: saleOrderValues,
+          error: err.message,
+        });
         throw err;
       }
     }

@@ -183,8 +183,8 @@ $1, $2, $3,
 $4, $5, $6,
 $7, $8, $9,
 $10, $11, $12,
-$13, $14, $15,
-$16, $17, $18
+$13, $14, to_timestamp($15/ 1000.0),
+to_timestamp($16 / 1000.0), $17, $18
 
 )ON CONFLICT(sale_order_code) DO UPDATE SET
 sale_order_code= EXCLUDED.sale_order_code,
@@ -269,6 +269,8 @@ return_status= EXCLUDED.return_status,
         putawayCode,
       } = getReturnDataElement.returnSaleOrderValue;
 
+      // Convert date strings to integer timestamps (milliseconds since epoch)
+
       const returnSaleOrderValueValues = [
         saleOrderCode,
         returnStatus,
@@ -290,93 +292,108 @@ return_status= EXCLUDED.return_status,
         putawayCode || null,
       ];
 
-      const responseReturnSaleOrderValue = await client.query(
-        returnSaleOrderValueQuery,
-        returnSaleOrderValueValues
-      );
-      //   console.log(responseReturnSaleOrderValue);
+      try {
+        const responseReturnSaleOrderValue = await client.query(
+          returnSaleOrderValueQuery,
+          returnSaleOrderValueValues
+        );
+        //   console.log(responseReturnSaleOrderValue);
 
-      const returningSaleOrderCode =
-        responseReturnSaleOrderValue.rows[0].sale_order_code;
+        const returningSaleOrderCode =
+          responseReturnSaleOrderValue.rows[0].sale_order_code;
 
-      if (responseReturnSaleOrderValue.rowCount !== 1) {
-        throw new Error("returnSaleOrderValue Insertion Failed");
-      }
-
-      for (const returnSaleOrderItemsElement of getReturnDataElement.returnSaleOrderItems) {
-        const returnSaleOrderItemsElementValues = [
-          returnSaleOrderItemsElement?.skuCode,
-          returnSaleOrderItemsElement?.saleOrderItemCode,
-          returnSaleOrderItemsElement?.saleOrderItemStatus,
-          returnSaleOrderItemsElement?.channelProductId,
-          returnSaleOrderItemsElement?.shipmentCode,
-          returningSaleOrderCode,
-          //   returnSaleOrderItemsElement?.saleOrderCode,
-          returnSaleOrderItemsElement?.forwardItemFacility,
-          returnSaleOrderItemsElement?.reversePickupCode || null,
-          returnSaleOrderItemsElement?.inventoryType || null,
-          returnSaleOrderItemsElement?.marketplaceReturnReason,
-          returnSaleOrderItemsElement?.itemName,
-          returnSaleOrderItemsElement?.courierStatus,
-          returnSaleOrderItemsElement?.trackingStatus,
-          returnSaleOrderItemsElement?.returnRemarks || null,
-        ];
-        //  console.log(returnSaleOrderItemsElement);
-        try {
-          const responseReturnSaleOrderItems = await client.query(
-            returnSaleOrderItemsQuery,
-            returnSaleOrderItemsElementValues
-          );
-          // console.log(responseReturnSaleOrderItems);
-
-          if (responseReturnSaleOrderItems.rowCount !== 1) {
-            throw new Error("returnSaleOrderItems Insertion Failed");
-          }
-        } catch (err) {
-          console.error(
-            `Error inserting returnSaleOrderItems: ${returningSaleOrderCode}, saleORderItemCode : ${returnSaleOrderItemsElement?.saleOrderItemCode}`
-          );
-          throw err;
+        if (responseReturnSaleOrderValue.rowCount !== 1) {
+          throw new Error("returnSaleOrderValue Insertion Failed");
         }
-      }
 
-      // Query for return_address_details_list
+        for (const returnSaleOrderItemsElement of getReturnDataElement.returnSaleOrderItems) {
+          const returnSaleOrderItemsElementValues = [
+            returnSaleOrderItemsElement?.skuCode,
+            returnSaleOrderItemsElement?.saleOrderItemCode,
+            returnSaleOrderItemsElement?.saleOrderItemStatus,
+            returnSaleOrderItemsElement?.channelProductId,
+            returnSaleOrderItemsElement?.shipmentCode,
+            returningSaleOrderCode,
+            //   returnSaleOrderItemsElement?.saleOrderCode,
+            returnSaleOrderItemsElement?.forwardItemFacility,
+            returnSaleOrderItemsElement?.reversePickupCode || null,
+            returnSaleOrderItemsElement?.inventoryType || null,
+            returnSaleOrderItemsElement?.marketplaceReturnReason,
+            returnSaleOrderItemsElement?.itemName,
+            returnSaleOrderItemsElement?.courierStatus,
+            returnSaleOrderItemsElement?.trackingStatus,
+            returnSaleOrderItemsElement?.returnRemarks || null,
+          ];
+          //  console.log(returnSaleOrderItemsElement);
 
-      for (const returnAddressDetailsListElement of getReturnDataElement.returnAddressDetailsList) {
-        const returnAddressDetailsListElementValue = [
-          returningSaleOrderCode,
-          returnAddressDetailsListElement?.name || "********",
-          returnAddressDetailsListElement?.addressLine1 || "********",
-          returnAddressDetailsListElement?.addressLine2 || "********",
-          returnAddressDetailsListElement?.city,
-          returnAddressDetailsListElement?.state,
-          returnAddressDetailsListElement?.country,
-          returnAddressDetailsListElement?.pincode,
-          returnAddressDetailsListElement?.phone || "********",
-          returnAddressDetailsListElement?.email || null,
-          returnAddressDetailsListElement?.latitude || null,
-          returnAddressDetailsListElement?.longitude || null,
-          returnAddressDetailsListElement?.type,
-        ];
-        try {
-          const responseReturnAddressDetailsList = await client.query(
-            returnAddressDetailsListQuery,
-            returnAddressDetailsListElementValue
-          );
+          try {
+            const responseReturnSaleOrderItems = await client.query(
+              returnSaleOrderItemsQuery,
+              returnSaleOrderItemsElementValues
+            );
+            // console.log(responseReturnSaleOrderItems);
 
-          if (responseReturnAddressDetailsList.rowCount !== 1) {
-            throw new Error("returnAddressDetailsList Insertion Failed");
+            if (responseReturnSaleOrderItems.rowCount !== 1) {
+              throw new Error("returnSaleOrderItems Insertion Failed");
+            }
+          } catch (err) {
+            console.error("Error inserting into return_sale_order_items", {
+              saleOrderItemCode: returnSaleOrderItemsElement?.saleOrderItemCode,
+              values: returnSaleOrderItemsElementValues,
+              error: err.message,
+              stack: err.stack,
+            });
+            throw err;
           }
-        } catch (err) {
-          console.error(
-            "Return Address Details List  Insertion failed" +
-              "returningSaleOrdercode" +
-              returningSaleOrderCode
-          );
-          throw err;
         }
-      }
 
+        // Query for return_address_details_list
+
+        for (const returnAddressDetailsListElement of getReturnDataElement.returnAddressDetailsList) {
+          const returnAddressDetailsListElementValue = [
+            returningSaleOrderCode,
+            returnAddressDetailsListElement?.name || "********",
+            returnAddressDetailsListElement?.addressLine1 || "********",
+            returnAddressDetailsListElement?.addressLine2 || "********",
+            returnAddressDetailsListElement?.city,
+            returnAddressDetailsListElement?.state,
+            returnAddressDetailsListElement?.country,
+            returnAddressDetailsListElement?.pincode,
+            returnAddressDetailsListElement?.phone || "********",
+            returnAddressDetailsListElement?.email || null,
+            returnAddressDetailsListElement?.latitude || null,
+            returnAddressDetailsListElement?.longitude || null,
+            returnAddressDetailsListElement?.type,
+          ];
+
+          try {
+            const responseReturnAddressDetailsList = await client.query(
+              returnAddressDetailsListQuery,
+              returnAddressDetailsListElementValue
+            );
+
+            if (responseReturnAddressDetailsList.rowCount !== 1) {
+              throw new Error("returnAddressDetailsList Insertion Failed");
+            }
+          } catch (err) {
+            console.error("Error inserting into return_address_details_list", {
+              saleOrderCode: returningSaleOrderCode,
+              values: returnAddressDetailsListElementValue,
+              error: err.message,
+              stack: err.stack,
+            });
+            throw err;
+          }
+        }
+      } catch (err) {
+        console.error("Error inserting into return_sale_order_value", {
+          saleOrderCode,
+          values: returnSaleOrderValueValues,
+          error: err.message,
+          stack: err.stack,
+        });
+        throw err;
+      }
       //   const returnAddressDetailsListValues = [];
     }
     await client.query("COMMIT");
